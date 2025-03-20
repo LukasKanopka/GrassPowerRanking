@@ -48,6 +48,7 @@
                         <tr>
                             <th>Name</th>
                             <th>Current ELO</th>
+                            <th>Starting ELO</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
@@ -56,6 +57,16 @@
                         <tr>
                             <td>{{ player.name }}</td>
                             <td>{{ "%.2f"|format(player.elo) }}</td>
+                            <td>
+                                <form method="POST" class="d-flex align-items-center">
+                                    <input type="hidden" name="player_id" value="{{ player.id }}">
+                                    <input type="number" name="new_starting_elo" class="form-control form-control-sm me-2" 
+                                           value="{{ "%.2f"|format(player.starting_elo) }}" step="0.01" style="width: 80px;">
+                                    <button type="submit" name="edit_starting_elo" value="1" class="btn btn-sm btn-primary">
+                                        Update
+                                    </button>
+                                </form>
+                            </td>
                             <td>
                                 <form method="POST" class="d-inline">
                                     <input type="hidden" name="player_id" value="{{ player.id }}">

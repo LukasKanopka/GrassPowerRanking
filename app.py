@@ -294,6 +294,31 @@ def manage_players():
                         success_message = f"Player '{player_name}' removed successfully"
                 else:
                     error_message = "Player not found"
+        
+        elif 'edit_starting_elo' in request.form:
+            # Handle edit starting ELO
+            player_id = request.form.get('player_id')
+            new_starting_elo = request.form.get('new_starting_elo')
+            
+            if player_id and new_starting_elo:
+                player = Player.query.get(player_id)
+                if player:
+                    try:
+                        new_starting_elo = float(new_starting_elo)
+                        player.starting_elo = new_starting_elo
+                        
+                        # Remember the old ELO for messaging
+                        old_elo = player.elo
+                        
+                        # Recalculate ELOs to update current ELO values
+                        db.session.commit()
+                        recalculate_all_elos()
+                        
+                        success_message = f"Updated {player.name}'s starting ELO to {new_starting_elo}. Current ELO changed from {old_elo:.2f} to {player.elo:.2f}"
+                    except ValueError:
+                        error_message = "Starting ELO must be a valid number"
+                else:
+                    error_message = "Player not found"
     
     # Get all players
     players = Player.query.order_by(Player.name).all()
