@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>Manage Players</h2>
+
+{% if error_message %}
+<div class="alert alert-danger" role="alert">
+    {{ error_message }}
+</div>
+{% endif %}
+
+{% if success_message %}
+<div class="alert alert-success" role="alert">
+    {{ success_message }}
+</div>
+{% endif %}
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h3>Add New Player</h3>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    <div class="mb-3">
+                        <label for="player_name" class="form-label">Player Name</label>
+                        <input type="text" class="form-control" id="player_name" name="player_name" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="starting_elo" class="form-label">Starting ELO</label>
+                        <input type="number" class="form-control" id="starting_elo" name="starting_elo" value="1000" step="0.01">
+                    </div>
+                    <button type="submit" name="add_player" value="1" class="btn btn-primary">Add Player</button>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h3>Current Players</h3>
+            </div>
+            <div class="card-body">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Current ELO</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for player in players %}
+                        <tr>
+                            <td>{{ player.name }}</td>
+                            <td>{{ "%.2f"|format(player.elo) }}</td>
+                            <td>
+                                <form method="POST" class="d-inline">
+                                    <input type="hidden" name="player_id" value="{{ player.id }}">
+                                    <button type="submit" name="remove_player" value="1" class="btn btn-sm btn-danger" 
+                                            {% if player_in_games[player.id] %}disabled{% endif %}
+                                            onclick="return confirm('Are you sure you want to remove {{ player.name }}?')">
+                                        Remove
+                                    </button>
+                                </form>
+                                {% if player_in_games[player.id] %}
+                                <small class="text-muted d-block">Cannot remove - in games</small>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

@@ -238,6 +238,88 @@ def update_elos(team1_ids, team2_ids, winner):
     for player in team2:
         player.elo += team2_change
 
+@app.route('/manage_players', methods=['GET', 'POST'])
+def manage_players():
+    error_message = None
+    success_message = None
+    
+    if request.method == 'POST':
+        if 'add_player' in request.form:
+            # Handle add player
+            player_name = request.form.get('player_name')
+            starting_elo = request.form.get('starting_elo', 1000)
+            
+            # Validate input
+            if not player_name:
+                error_message = "Player name is required"
+            else:
+                # Check if player with this name already exists
+                existing_player = Player.query.filter(Player.name == player_name).first()
+                if existing_player:
+                    error_message = f"Player '{player_name}' already exists"
+                else:
+                    # Create new player
+                    try:
+                        starting_elo = float(starting_elo)
+                        new_player = Player(name=player_name, elo=starting_elo)
+                        db.session.add(new_player)
+                        db.session.commit()
+                        success_message = f"Player '{player_name}' added successfully"
+                    except ValueError:
+                        error_message = "ELO must be a valid number"
+        
+        elif 'remove_player' in request.form:
+            # Handle remove player
+            player_id = request.form.get('player_id')
+            
+            if player_id:
+                player = Player.query.get(player_id)
+                if player:
+                    # Check if player is in any games
+                    games = Game.query.all()
+                    player_in_game = False
+                    
+                    for game in games:
+                        team1_ids = game.team1_players.split(',')
+                        team2_ids = game.team2_players.split(',')
+                        
+                        if str(player.id) in team1_ids or str(player.id) in team2_ids:
+                            player_in_game = True
+                            break
+                    
+                    if player_in_game:
+                        error_message = f"Cannot remove player '{player.name}' as they are part of existing games"
+                    else:
+                        player_name = player.name
+                        db.session.delete(player)
+                        db.session.commit()
+                        success_message = f"Player '{player_name}' removed successfully"
+                else:
+                    error_message = "Player not found"
+    
+    # Get all players
+    players = Player.query.order_by(Player.name).all()
+    
+    # For each player, check if they're in any games
+    player_in_games = {}
+    games = Game.query.all()
+    
+    for player in players:
+        player_in_games[player.id] = False
+        for game in games:
+            team1_ids = game.team1_players.split(',')
+            team2_ids = game.team2_players.split(',')
+            
+            if str(player.id) in team1_ids or str(player.id) in team2_ids:
+                player_in_games[player.id] = True
+                break
+    
+    return render_template('manage_players.html', 
+                          players=players, 
+                          player_in_games=player_in_games,
+                          error_message=error_message,
+                          success_message=success_message)
+
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
