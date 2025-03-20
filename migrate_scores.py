@@ -10,14 +10,14 @@ def migrate_scores():
         # Then add new players...
         # Current players and their ELOs from your main.py
         players_data = [
-            ("Lukas", 1134.19085563341),
-            ("Cade", 1005.5149580901099),
-            ("Alex", 994.4003280910782),
-            ("Marshall", 865.8938581854017),
-            ("Arvin", 865.80914436659),
-            ("Taylor", 1109.6252534724383),
-            ("Jenessa", 890.459460346373),
-            ("Keagan", 640.3747465275613)  # This player started with 750 in your main.py
+            ("Lukas", 1000),
+            ("Cade", 1000),
+            ("Alex", 1000),
+            ("Marshall", 1000),
+            ("Arvin", 1000),
+            ("Taylor", 1000),
+            ("Jenessa", 1000),
+            ("Keagan", 750)
         ]
         
         # Add each player to the database
