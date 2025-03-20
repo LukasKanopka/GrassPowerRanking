@@ -96,10 +96,14 @@ game4.set_teams(team1, team2)
 game4.set_winner(2)
 game4.update_elos()
 
-# print(game4.team2elo)
-# print(game4.team1elo)
+game5 = game()
 
-# game4.print_player_elo()
+team1 = [p for p in players if p.name in ["Alex", "Lukas"]]
+team2 = [p for p in players if p.name in ["Marshall", "Cade"]]
+
+game5.set_teams(team1, team2)
+game5.set_winner(1)
+game5.update_elos()
 
 # Sort and print all players by ELO
 print("\nAll players sorted by ELO:\n")

@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>Leaderboard</h2>
+<table class="table">
+    <thead>
+        <tr>
+            <th>Rank</th>
+            <th>Player</th>
+            <th>ELO</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for player in players %}
+        <tr>
+            <td>{{ loop.index }}</td>
+            <td>{{ player.name }}</td>
+            <td>{{ "%.2f"|format(player.elo) }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %} 

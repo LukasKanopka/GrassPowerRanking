@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>New Game</h2>
+<form method="POST">
+    <div class="row">
+        <div class="col-md-5">
+            <h4>Team 1</h4>
+            {% for player in players %}
+            <div class="form-check">
+                <input class="form-check-input" type="checkbox" name="team1" value="{{ player.id }}" id="team1_{{ player.id }}">
+                <label class="form-check-label" for="team1_{{ player.id }}">
+                    {{ player.name }} ({{ "%.2f"|format(player.elo) }})
+                </label>
+            </div>
+            {% endfor %}
+        </div>
+        <div class="col-md-5">
+            <h4>Team 2</h4>
+            {% for player in players %}
+            <div class="form-check">
+                <input class="form-check-input" type="checkbox" name="team2" value="{{ player.id }}" id="team2_{{ player.id }}">
+                <label class="form-check-label" for="team2_{{ player.id }}">
+                    {{ player.name }} ({{ "%.2f"|format(player.elo) }})
+                </label>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    <div class="mt-4">
+        <h4>Winner</h4>
+        <div class="form-check">
+            <input class="form-check-input" type="radio" name="winner" value="1" id="winner1" required>
+            <label class="form-check-label" for="winner1">Team 1</label>
+        </div>
+        <div class="form-check">
+            <input class="form-check-input" type="radio" name="winner" value="2" id="winner2">
+            <label class="form-check-label" for="winner2">Team 2</label>
+        </div>
+    </div>
+    <button type="submit" class="btn btn-primary mt-4">Save Game</button>
+</form>
+{% endblock %} 
