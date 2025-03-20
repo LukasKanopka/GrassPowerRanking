@@ -38,14 +38,51 @@
     </style>
 </head>
 <body>
-    <nav class="navbar navbar-expand-lg navbar-light bg-light">
-        <div class="container">
-            <a class="navbar-brand" href="/">ELO Tracker</a>
-            <div class="navbar-nav">
-                <a class="nav-link" href="/">Leaderboard</a>
-                <a class="nav-link" href="/new_game">New Game</a>
-                <a class="nav-link" href="/games">Games History</a>
-                <a class="nav-link" href="/manage_players">Manage Players</a>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="{{ url_for('index') }}">ELO Tracker</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <!-- Series Dropdown -->
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="seriesDropdown" role="button" 
+                           data-bs-toggle="dropdown" aria-expanded="false">
+                            {{ current_series.name if current_series else 'Select Series' }}
+                        </a>
+                        <ul class="dropdown-menu" aria-labelledby="seriesDropdown">
+                            {% for series in all_series %}
+                            <li>
+                                <a class="dropdown-item {% if series.id == session.current_series_id %}active{% endif %}" 
+                                   href="{{ url_for('select_series', series_id=series.id) }}">
+                                    {{ series.name }}
+                                </a>
+                            </li>
+                            {% endfor %}
+                            <li><hr class="dropdown-divider"></li>
+                            <li>
+                                <a class="dropdown-item" href="{{ url_for('manage_series') }}">
+                                    Manage Series
+                                </a>
+                            </li>
+                        </ul>
+                    </li>
+                    <!-- Existing menu items -->
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('index') }}">Leaderboard</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('new_game') }}">New Game</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('games') }}">Games</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('manage_players') }}">Manage Players</a>
+                    </li>
+                </ul>
             </div>
         </div>
     </nav>

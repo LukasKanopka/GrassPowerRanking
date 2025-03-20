@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <h2>Manage Series</h2>
+    <a href="{{ url_for('create_series') }}" class="btn btn-primary mb-3">Create New Series</a>
+    
+    <div class="card">
+        <div class="card-body">
+            {% if series_list %}
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Description</th>
+                        <th>Created</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for series in series_list %}
+                    <tr>
+                        <td>{{ series.name }}</td>
+                        <td>{{ series.description }}</td>
+                        <td>{{ series.created_at.strftime('%Y-%m-%d') }}</td>
+                        <td>
+                            <a href="{{ url_for('select_series', series_id=series.id) }}" 
+                               class="btn btn-sm btn-success {% if series.id == session.current_series_id %}disabled{% endif %}">
+                                Select
+                            </a>
+                            <a href="{{ url_for('edit_series', series_id=series.id) }}" 
+                               class="btn btn-sm btn-primary">
+                                Edit
+                            </a>
+                            <form method="POST" action="{{ url_for('delete_series', series_id=series.id) }}" 
+                                  class="d-inline"
+                                  onsubmit="return confirm('Delete this series and ALL its data?');">
+                                <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <p>No series found. Create your first series!</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %} 

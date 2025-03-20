@@ -1,5 +1,5 @@
-from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
-from models import db, Player, Game
+from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, session
+from models import db, Player, Game, Series
 from datetime import datetime
 import math
 
@@ -10,13 +10,118 @@ app.secret_key = 'your_secret_key'  # Needed for flash messages
 
 db.init_app(app)
 
+# Add this before_request handler to ensure a series is selected
+@app.before_request
+def ensure_series_selected():
+    if request.endpoint in ['static']:
+        return
+    
+    # Create default series if none exists
+    if Series.query.count() == 0:
+        default_series = Series(name="Default Series", description="Initial ranking series")
+        db.session.add(default_series)
+        db.session.commit()
+    
+    # Set current series in session if not already set
+    if 'current_series_id' not in session:
+        default_series = Series.query.first()
+        session['current_series_id'] = default_series.id
+
+# Series management routes
+@app.route('/manage_series')
+def manage_series():
+    series_list = Series.query.order_by(Series.name).all()
+    return render_template('manage_series.html', series_list=series_list)
+
+@app.route('/series/select/<int:series_id>')
+def select_series(series_id):
+    series = Series.query.get_or_404(series_id)
+    session['current_series_id'] = series_id
+    flash(f'Switched to "{series.name}" series', 'success')
+    return redirect(url_for('index'))
+
+@app.route('/series/create', methods=['GET', 'POST'])
+def create_series():
+    if request.method == 'POST':
+        name = request.form.get('name')
+        description = request.form.get('description')
+        
+        if not name:
+            flash('Series name is required', 'danger')
+            return render_template('create_series.html')
+        
+        # Check if series with this name already exists
+        existing = Series.query.filter(Series.name == name).first()
+        if existing:
+            flash('A series with this name already exists', 'danger')
+            return render_template('create_series.html')
+        
+        new_series = Series(name=name, description=description)
+        db.session.add(new_series)
+        db.session.commit()
+        
+        flash(f'Series "{name}" created successfully', 'success')
+        return redirect(url_for('manage_series'))
+    
+    return render_template('create_series.html')
+
+@app.route('/series/edit/<int:series_id>', methods=['GET', 'POST'])
+def edit_series(series_id):
+    series = Series.query.get_or_404(series_id)
+    
+    if request.method == 'POST':
+        name = request.form.get('name')
+        description = request.form.get('description')
+        
+        if not name:
+            flash('Series name is required', 'danger')
+            return render_template('edit_series.html', series=series)
+        
+        # Check for name conflict only if name changed
+        if name != series.name:
+            existing = Series.query.filter(Series.name == name).first()
+            if existing:
+                flash('A series with this name already exists', 'danger')
+                return render_template('edit_series.html', series=series)
+        
+        series.name = name
+        series.description = description
+        db.session.commit()
+        
+        flash(f'Series "{name}" updated successfully', 'success')
+        return redirect(url_for('manage_series'))
+    
+    return render_template('edit_series.html', series=series)
+
+@app.route('/series/delete/<int:series_id>', methods=['POST'])
+def delete_series(series_id):
+    if Series.query.count() <= 1:
+        flash('Cannot delete the only series. Create another series first.', 'danger')
+        return redirect(url_for('manage_series'))
+    
+    series = Series.query.get_or_404(series_id)
+    
+    # If we're deleting the current series, select another one
+    if session.get('current_series_id') == series_id:
+        another_series = Series.query.filter(Series.id != series_id).first()
+        session['current_series_id'] = another_series.id
+    
+    db.session.delete(series)
+    db.session.commit()
+    
+    flash(f'Series "{series.name}" deleted with all its data', 'success')
+    return redirect(url_for('manage_series'))
+
 @app.route('/')
 def index():
-    players = Player.query.order_by(Player.elo.desc()).all()
+    series_id = session.get('current_series_id')
+    current_series = Series.query.get(series_id)
+    
+    players = Player.query.filter_by(series_id=series_id).order_by(Player.elo.desc()).all()
     
     # Calculate player stats
     player_stats = {}
-    games = Game.query.all()
+    games = Game.query.filter_by(series_id=series_id).all()
     
     for player in players:
         player_stats[player.id] = {'wins': 0, 'losses': 0, 'win_pct': 0}
@@ -51,10 +156,20 @@ def index():
             stats['win_pct'] = 0
         stats['win_pct'] = round(stats['win_pct'], 1)
     
-    return render_template('leaderboard.html', players=players, player_stats=player_stats)
+    # Get all series for dropdown
+    all_series = Series.query.all()
+    
+    return render_template('leaderboard.html', 
+                           players=players, 
+                           player_stats=player_stats, 
+                           current_series=current_series,
+                           all_series=all_series)
 
 @app.route('/new_game', methods=['GET', 'POST'])
 def new_game():
+    series_id = session.get('current_series_id')
+    current_series = Series.query.get(series_id)
+    
     if request.method == 'POST':
         # Get selected players for each team
         team1 = request.form.getlist('team1')
@@ -64,64 +179,82 @@ def new_game():
         # Validate
         if not team1 or not team2:
             flash('Please select players for both teams', 'danger')
-            players = Player.query.all()
-            return render_template('new_game.html', players=players)
+            players = Player.query.filter_by(series_id=series_id).all()
+            return render_template('new_game.html', players=players, current_series=current_series)
         
         # Process each game
         for i in range(1, game_count + 1):
             winner = int(request.form.get(f'winner_{i}'))
             
-            # Get the next sequence number
-            last_game = Game.query.order_by(Game.sequence.desc()).first()
+            # Get the next sequence number within this series
+            last_game = Game.query.filter_by(series_id=series_id).order_by(Game.sequence.desc()).first()
             next_seq = 1 if not last_game else last_game.sequence + 1
             
-            # Create and save game
+            # Create and save game with series_id
             game = Game(
                 team1_players=','.join(team1),
                 team2_players=','.join(team2),
                 winner=winner,
-                sequence=next_seq
+                sequence=next_seq,
+                series_id=series_id
             )
             db.session.add(game)
             
             # Update ELOs
-            update_elos(team1, team2, winner)
+            update_elos(team1, team2, winner, series_id)
             
         db.session.commit()
         flash(f'Successfully saved {game_count} games!', 'success')
         return redirect(url_for('index'))
     
-    players = Player.query.all()
-    return render_template('new_game.html', players=players)
+    players = Player.query.filter_by(series_id=series_id).all()
+    all_series = Series.query.all()
+    
+    return render_template('new_game.html', 
+                          players=players,
+                          current_series=current_series,
+                          all_series=all_series)
 
 @app.route('/games')
 def games():
-    games_list = Game.query.order_by(Game.sequence.desc()).all()
-    players = Player.query.all()
+    series_id = session.get('current_series_id')
+    current_series = Series.query.get(series_id)
+    
+    games_list = Game.query.filter_by(series_id=series_id).order_by(Game.sequence.desc()).all()
+    players = Player.query.filter_by(series_id=series_id).all()
     
     # Create a dict for quick lookup
     players_dict = {str(p.id): p.name for p in players}
     
     formatted_games = []
+    
     for game in games_list:
-        team1_names = [players_dict[pid] for pid in game.team1_players.split(',')]
-        team2_names = [players_dict[pid] for pid in game.team2_players.split(',')]
+        team1_names = [players_dict.get(pid, "Unknown") for pid in game.team1_players.split(',')]
+        team2_names = [players_dict.get(pid, "Unknown") for pid in game.team2_players.split(',')]
         
         formatted_games.append({
             'id': game.id,
-            'date': game.date.strftime('%Y-%m-%d %H:%M'),
+            'date': game.date.strftime('%Y-%m-%d %H:%M') if game.date else "Unknown",
             'team1': ', '.join(team1_names),
             'team2': ', '.join(team2_names),
-            'winner': 'Team 1' if game.winner == 1 else 'Team 2',
+            'winner': game.winner,
             'sequence': game.sequence
         })
     
-    return render_template('games.html', games=formatted_games)
+    all_series = Series.query.all()
+    
+    return render_template('games.html', 
+                          games=formatted_games,
+                          current_series=current_series,
+                          all_series=all_series)
 
 @app.route('/edit_game/<int:game_id>', methods=['GET', 'POST'])
 def edit_game(game_id):
-    game = Game.query.get_or_404(game_id)
-    players = Player.query.all()
+    series_id = session.get('current_series_id')
+    
+    # Get the game and verify it belongs to the current series
+    game = Game.query.filter_by(id=game_id, series_id=series_id).first_or_404()
+    players = Player.query.filter_by(series_id=series_id).all()
     
     if request.method == 'POST':
         # Get updated data
@@ -137,7 +270,7 @@ def edit_game(game_id):
         db.session.commit()
         
         # Recalculate all ELOs
-        recalculate_all_elos()
+        recalculate_all_elos(series_id)
         
         flash('Game updated successfully!')
         return redirect(url_for('games'))
@@ -154,12 +287,17 @@ def edit_game(game_id):
 
 @app.route('/delete_game/<int:game_id>', methods=['POST'])
 def delete_game(game_id):
-    game = Game.query.get_or_404(game_id)
+    series_id = session.get('current_series_id')
+    
+    # Get the game and verify it belongs to the current series
+    game = Game.query.filter_by(id=game_id, series_id=series_id).first_or_404()
+    
+    # Delete the game
     db.session.delete(game)
     db.session.commit()
     
-    # Recalculate ELOs for all players
-    recalculate_all_elos()
+    # Recalculate ELOs for all players in this series
+    recalculate_all_elos(series_id)
     
     flash('Game deleted successfully!')
     return redirect(url_for('games'))
@@ -184,7 +322,7 @@ def update_game_order():
         db.session.commit()
         
         # Recalculate ELOs based on the new game order
-        recalculate_all_elos()
+        recalculate_all_elos(session.get('current_series_id'))
         
         return jsonify({'message': 'Game order updated successfully'}), 200
     
@@ -192,27 +330,31 @@ def update_game_order():
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
 
-def recalculate_all_elos():
-    # Reset all player ELOs to their custom starting values
-    players = Player.query.all()
+def recalculate_all_elos(series_id):
+    # Reset all player ELOs to their starting values
+    players = Player.query.filter_by(series_id=series_id).all()
     for player in players:
         player.elo = player.starting_elo
     
-    # Get all games ordered by sequence
-    games = Game.query.order_by(Game.sequence).all()
+    # Get all games in this series, ordered by sequence
+    games = Game.query.filter_by(series_id=series_id).order_by(Game.sequence).all()
     
     # Replay all games to recalculate ELOs
     for game in games:
-        team1_ids = game.team1_players.split(',')
-        team2_ids = game.team2_players.split(',')
-        update_elos(team1_ids, team2_ids, game.winner)
+        team1_ids = [id for id in game.team1_players.split(',')]
+        team2_ids = [id for id in game.team2_players.split(',')]
+        update_elos(team1_ids, team2_ids, game.winner, series_id)
     
     db.session.commit()
 
-def update_elos(team1_ids, team2_ids, winner):
+def update_elos(team1_ids, team2_ids, winner, series_id):
+    # Helper to fetch player by id and series
+    def get_player(player_id):
+        return Player.query.filter_by(id=player_id, series_id=series_id).first()
+    
     # Get player objects
-    team1 = [Player.query.get(int(id)) for id in team1_ids]
-    team2 = [Player.query.get(int(id)) for id in team2_ids]
+    team1 = [get_player(int(id)) for id in team1_ids]
+    team2 = [get_player(int(id)) for id in team2_ids]
     
     # Calculate average ELOs
     team1_avg = sum(p.elo for p in team1) / len(team1)
@@ -238,6 +380,8 @@ def update_elos(team1_ids, team2_ids, winner):
 
 @app.route('/manage_players', methods=['GET', 'POST'])
 def manage_players():
+    series_id = session.get('current_series_id')
+    current_series = Series.query.get(series_id)
     error_message = None
     success_message = None
     
@@ -251,15 +395,24 @@ def manage_players():
             if not player_name:
                 error_message = "Player name is required"
             else:
-                # Check if player with this name already exists
-                existing_player = Player.query.filter(Player.name == player_name).first()
+                # Check if player with this name already exists in this series
+                existing_player = Player.query.filter_by(
+                    name=player_name, 
+                    series_id=series_id
+                ).first()
+                
                 if existing_player:
-                    error_message = f"Player '{player_name}' already exists"
+                    error_message = f"Player '{player_name}' already exists in this series"
                 else:
                     # Create new player
                     try:
                         starting_elo = float(starting_elo)
-                        new_player = Player(name=player_name, elo=starting_elo, starting_elo=starting_elo)
+                        new_player = Player(
+                            name=player_name, 
+                            elo=starting_elo, 
+                            starting_elo=starting_elo,
+                            series_id=series_id
+                        )
                         db.session.add(new_player)
                         db.session.commit()
                         success_message = f"Player '{player_name}' added successfully"
@@ -271,10 +424,10 @@ def manage_players():
             player_id = request.form.get('player_id')
             
             if player_id:
-                player = Player.query.get(player_id)
+                player = Player.query.filter_by(id=player_id, series_id=series_id).first()
                 if player:
-                    # Check if player is in any games
-                    games = Game.query.all()
+                    # Check if player is in any games in this series
+                    games = Game.query.filter_by(series_id=series_id).all()
                     player_in_game = False
                     
                     for game in games:
@@ -301,7 +454,7 @@ def manage_players():
             new_starting_elo = request.form.get('new_starting_elo')
             
             if player_id and new_starting_elo:
-                player = Player.query.get(player_id)
+                player = Player.query.filter_by(id=player_id, series_id=series_id).first()
                 if player:
                     try:
                         new_starting_elo = float(new_starting_elo)
@@ -312,7 +465,7 @@ def manage_players():
                         
                         # Recalculate ELOs to update current ELO values
                         db.session.commit()
-                        recalculate_all_elos()
+                        recalculate_all_elos(series_id)
                         
                         success_message = f"Updated {player.name}'s starting ELO to {new_starting_elo}. Current ELO changed from {old_elo:.2f} to {player.elo:.2f}"
                     except ValueError:
@@ -320,12 +473,12 @@ def manage_players():
                 else:
                     error_message = "Player not found"
     
-    # Get all players
-    players = Player.query.order_by(Player.name).all()
+    # Get all players in this series
+    players = Player.query.filter_by(series_id=series_id).order_by(Player.name).all()
     
-    # For each player, check if they're in any games
+    # For each player, check if they're in any games in this series
     player_in_games = {}
-    games = Game.query.all()
+    games = Game.query.filter_by(series_id=series_id).all()
     
     for player in players:
         player_in_games[player.id] = False
@@ -337,11 +490,15 @@ def manage_players():
                 player_in_games[player.id] = True
                 break
     
+    all_series = Series.query.all()
+    
     return render_template('manage_players.html', 
                           players=players, 
                           player_in_games=player_in_games,
                           error_message=error_message,
-                          success_message=success_message)
+                          success_message=success_message,
+                          current_series=current_series,
+                          all_series=all_series)
 
 if __name__ == '__main__':
     with app.app_context():
