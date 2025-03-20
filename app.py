@@ -14,14 +14,11 @@ db.init_app(app)
 def index():
     players = Player.query.order_by(Player.elo.desc()).all()
     
-    # Calculate wins, losses, and win percentage for each player
+    # Calculate player stats
     player_stats = {}
-    
-    # Get all games
     games = Game.query.all()
     
     for player in players:
-        # Initialize stats
         player_stats[player.id] = {'wins': 0, 'losses': 0, 'win_pct': 0}
     
     # Calculate wins and losses
@@ -29,7 +26,6 @@ def index():
         team1_ids = [int(pid) for pid in game.team1_players.split(',')]
         team2_ids = [int(pid) for pid in game.team2_players.split(',')]
         
-        # Team 1 won
         if game.winner == 1:
             for player_id in team1_ids:
                 if player_id in player_stats:
@@ -38,7 +34,6 @@ def index():
                 if player_id in player_stats:
                     player_stats[player_id]['losses'] += 1
         
-        # Team 2 won
         elif game.winner == 2:
             for player_id in team1_ids:
                 if player_id in player_stats:
@@ -54,8 +49,6 @@ def index():
             stats['win_pct'] = (stats['wins'] / total_games) * 100
         else:
             stats['win_pct'] = 0
-        
-        # Format win percentage to 1 decimal place
         stats['win_pct'] = round(stats['win_pct'], 1)
     
     return render_template('leaderboard.html', players=players, player_stats=player_stats)
@@ -66,25 +59,36 @@ def new_game():
         # Get selected players for each team
         team1 = request.form.getlist('team1')
         team2 = request.form.getlist('team2')
-        winner = int(request.form['winner'])
+        game_count = int(request.form.get('game_count', 1))
         
-        # Get the next sequence number
-        last_game = Game.query.order_by(Game.sequence.desc()).first()
-        next_seq = 1 if not last_game else last_game.sequence + 1
+        # Validate
+        if not team1 or not team2:
+            flash('Please select players for both teams', 'danger')
+            players = Player.query.all()
+            return render_template('new_game.html', players=players)
         
-        # Create and save game
-        game = Game(
-            team1_players=','.join(team1),
-            team2_players=','.join(team2),
-            winner=winner,
-            sequence=next_seq
-        )
-        db.session.add(game)
-        
-        # Update ELOs
-        update_elos(team1, team2, winner)
-        
+        # Process each game
+        for i in range(1, game_count + 1):
+            winner = int(request.form.get(f'winner_{i}'))
+            
+            # Get the next sequence number
+            last_game = Game.query.order_by(Game.sequence.desc()).first()
+            next_seq = 1 if not last_game else last_game.sequence + 1
+            
+            # Create and save game
+            game = Game(
+                team1_players=','.join(team1),
+                team2_players=','.join(team2),
+                winner=winner,
+                sequence=next_seq
+            )
+            db.session.add(game)
+            
+            # Update ELOs
+            update_elos(team1, team2, winner)
+            
         db.session.commit()
+        flash(f'Successfully saved {game_count} games!', 'success')
         return redirect(url_for('index'))
     
     players = Player.query.all()

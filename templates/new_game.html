@@ -31,17 +31,32 @@
     </div>
     
     <div class="mt-4">
-        <h4>Winner</h4>
-        <div class="form-check">
-            <input class="form-check-input" type="radio" name="winner" value="1" id="winner1" required>
-            <label class="form-check-label" for="winner1">Team 1</label>
-        </div>
-        <div class="form-check">
-            <input class="form-check-input" type="radio" name="winner" value="2" id="winner2">
-            <label class="form-check-label" for="winner2">Team 2</label>
+        <h4>Number of Games</h4>
+        <select id="game-count" name="game_count" class="form-select mb-3" style="max-width: 100px;">
+            <option value="1">1</option>
+            <option value="2">2</option>
+            <option value="3">3</option>
+            <option value="4">4</option>
+            <option value="5">5</option>
+            <option value="6">6</option>
+            <option value="7">7</option>
+        </select>
+        
+        <div id="games-container">
+            <div class="game-entry mb-3 p-3 border rounded">
+                <h5>Game 1</h5>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="winner_1" value="1" id="winner1_1" required>
+                    <label class="form-check-label" for="winner1_1">Team 1 wins</label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="winner_1" value="2" id="winner2_1">
+                    <label class="form-check-label" for="winner2_1">Team 2 wins</label>
+                </div>
+            </div>
         </div>
     </div>
-    <button type="submit" class="btn btn-primary mt-4">Save Game</button>
+    <button type="submit" class="btn btn-primary mt-4">Save Games</button>
 </form>
 
 <script>
@@ -87,6 +102,50 @@ $(document).ready(function() {
             calculateAvgElo(otherTeam);
         }
     });
+    
+    // Handle game count changes
+    $('#game-count').change(function() {
+        const gameCount = parseInt($(this).val());
+        updateGameEntries(gameCount);
+    });
+    
+    function updateGameEntries(count) {
+        const container = $('#games-container');
+        
+        // First, store any existing values
+        const existingValues = {};
+        $('.game-entry').each(function(index) {
+            const gameNum = index + 1;
+            const winner = $(`input[name="winner_${gameNum}"]:checked`).val();
+            if (winner) {
+                existingValues[gameNum] = winner;
+            }
+        });
+        
+        // Clear container
+        container.empty();
+        
+        // Add the specified number of game entries
+        for (let i = 1; i <= count; i++) {
+            const gameEntry = `
+                <div class="game-entry mb-3 p-3 border rounded">
+                    <h5>Game ${i}</h5>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="winner_${i}" value="1" id="winner1_${i}" ${existingValues[i] === '1' ? 'checked' : ''} required>
+                        <label class="form-check-label" for="winner1_${i}">Team 1 wins</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="winner_${i}" value="2" id="winner2_${i}" ${existingValues[i] === '2' ? 'checked' : ''}>
+                        <label class="form-check-label" for="winner2_${i}">Team 2 wins</label>
+                    </div>
+                </div>
+            `;
+            container.append(gameEntry);
+        }
+    }
+    
+    // Initialize with one game
+    updateGameEntries(1);
 });
 </script>
 {% endblock %} 
