@@ -43,7 +43,21 @@ def migrate_games():
                     ["Alex", "Lukas"],  # Team 1
                     ["Cade", "Marshall"]  # Team 2
                 ],
-                "winners": [1]  # Pattern of winners for 1 game
+                "winners": [1, 1]  # Pattern of winners for 1 game
+            },
+            {
+                "teams": [
+                    ["Jenessa", "Lukas", "Tiffany", "Cade"],  # Team 1
+                    ["Alex", "Marshall", "Taylor", "Arvin"]  # Team 2
+                ],
+                "winners": [1, 1]  # Pattern of winners for 1 game
+            },
+                        {
+                "teams": [
+                    ["Taylor", "Lukas", "Tiffany", "Marshall"],  # Team 1
+                    ["Alex", "Cade", "Jenessa", "Arvin"]  # Team 2
+                ],
+                "winners": [1, 1]  # Pattern of winners for 1 game
             }
         ]
         

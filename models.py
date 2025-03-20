@@ -7,6 +7,7 @@ class Player(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(80), unique=True, nullable=False)
     elo = db.Column(db.Float, default=1000)
+    starting_elo = db.Column(db.Float, default=1000)
 
 class Game(db.Model):
     id = db.Column(db.Integer, primary_key=True)

@@ -193,12 +193,10 @@ def update_game_order():
         return jsonify({'error': str(e)}), 500
 
 def recalculate_all_elos():
-    # Reset all player ELOs to starting values
-    for player in Player.query.all():
-        if player.name == "Keagan":
-            player.elo = 750  # Special case for Keagan
-        else:
-            player.elo = 1000
+    # Reset all player ELOs to their custom starting values
+    players = Player.query.all()
+    for player in players:
+        player.elo = player.starting_elo
     
     # Get all games ordered by sequence
     games = Game.query.order_by(Game.sequence).all()
@@ -261,7 +259,7 @@ def manage_players():
                     # Create new player
                     try:
                         starting_elo = float(starting_elo)
-                        new_player = Player(name=player_name, elo=starting_elo)
+                        new_player = Player(name=player_name, elo=starting_elo, starting_elo=starting_elo)
                         db.session.add(new_player)
                         db.session.commit()
                         success_message = f"Player '{player_name}' added successfully"
