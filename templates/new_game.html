@@ -5,10 +5,11 @@
 <form method="POST">
     <div class="row">
         <div class="col-md-5">
-            <h4>Team 1</h4>
+            <h4>Team 1 <span class="badge bg-primary" id="team1-avg-elo">Avg ELO: 0</span></h4>
             {% for player in players %}
             <div class="form-check">
-                <input class="form-check-input" type="checkbox" name="team1" value="{{ player.id }}" id="team1_{{ player.id }}">
+                <input class="form-check-input team-selector" type="checkbox" name="team1" value="{{ player.id }}" 
+                       id="team1_{{ player.id }}" data-player-elo="{{ player.elo }}" data-team="1">
                 <label class="form-check-label" for="team1_{{ player.id }}">
                     {{ player.name }} ({{ "%.2f"|format(player.elo) }})
                 </label>
@@ -16,10 +17,11 @@
             {% endfor %}
         </div>
         <div class="col-md-5">
-            <h4>Team 2</h4>
+            <h4>Team 2 <span class="badge bg-primary" id="team2-avg-elo">Avg ELO: 0</span></h4>
             {% for player in players %}
             <div class="form-check">
-                <input class="form-check-input" type="checkbox" name="team2" value="{{ player.id }}" id="team2_{{ player.id }}">
+                <input class="form-check-input team-selector" type="checkbox" name="team2" value="{{ player.id }}" 
+                       id="team2_{{ player.id }}" data-player-elo="{{ player.elo }}" data-team="2">
                 <label class="form-check-label" for="team2_{{ player.id }}">
                     {{ player.name }} ({{ "%.2f"|format(player.elo) }})
                 </label>
@@ -27,6 +29,7 @@
             {% endfor %}
         </div>
     </div>
+    
     <div class="mt-4">
         <h4>Winner</h4>
         <div class="form-check">
@@ -40,4 +43,50 @@
     </div>
     <button type="submit" class="btn btn-primary mt-4">Save Game</button>
 </form>
+
+<script>
+$(document).ready(function() {
+    // Function to calculate average ELO for a team
+    function calculateAvgElo(teamNumber) {
+        let totalElo = 0;
+        let playerCount = 0;
+        
+        // Select all checked checkboxes for this team
+        $(`input[name="team${teamNumber}"]:checked`).each(function() {
+            const playerElo = parseFloat($(this).data('player-elo'));
+            totalElo += playerElo;
+            playerCount++;
+        });
+        
+        // Calculate average or return 0 if no players selected
+        const avgElo = playerCount > 0 ? totalElo / playerCount : 0;
+        
+        // Update the display
+        $(`#team${teamNumber}-avg-elo`).text(`Avg ELO: ${avgElo.toFixed(2)}`);
+    }
+    
+    // Calculate initial averages (in case there are default selections)
+    calculateAvgElo(1);
+    calculateAvgElo(2);
+    
+    // Event handler for checkbox changes
+    $('.team-selector').change(function() {
+        const teamNumber = $(this).data('team');
+        calculateAvgElo(teamNumber);
+        
+        // Extra feature: prevent a player from being on both teams
+        const playerId = $(this).val();
+        
+        // If this checkbox was just checked
+        if ($(this).is(':checked')) {
+            // Uncheck the same player on the other team
+            const otherTeam = teamNumber === 1 ? 2 : 1;
+            $(`input[name="team${otherTeam}"][value="${playerId}"]`).prop('checked', false);
+            
+            // Recalculate the other team's average
+            calculateAvgElo(otherTeam);
+        }
+    });
+});
+</script>
 {% endblock %} 

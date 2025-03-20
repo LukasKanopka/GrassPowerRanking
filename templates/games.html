@@ -11,9 +11,18 @@
     {% endif %}
 {% endwith %}
 
-<table class="table table-striped">
+<div class="alert alert-info mb-3">
+    <i class="bi bi-info-circle"></i> You can drag and drop games to reorder them. After reordering, click "Save Order" to update the sequence.
+</div>
+
+<div class="mb-3">
+    <button id="save-order" class="btn btn-success">Save Order</button>
+</div>
+
+<table class="table table-striped" id="games-table">
     <thead>
         <tr>
+            <th style="width: 50px"></th>
             <th>Sequence</th>
             <th>Date</th>
             <th>Team 1</th>
@@ -22,10 +31,11 @@
             <th>Actions</th>
         </tr>
     </thead>
-    <tbody>
+    <tbody id="sortable-games">
         {% for game in games %}
-        <tr>
-            <td>{{ game.sequence }}</td>
+        <tr class="draggable" data-game-id="{{ game.id }}" data-sequence="{{ game.sequence }}">
+            <td><span class="game-handle">&#9776;</span></td>
+            <td class="sequence-number">{{ game.sequence }}</td>
             <td>{{ game.date }}</td>
             <td>{{ game.team1 }}</td>
             <td>{{ game.team2 }}</td>
@@ -40,4 +50,54 @@
         {% endfor %}
     </tbody>
 </table>
+
+<script>
+$(function() {
+    // Store the original sequence numbers
+    let originalSequences = [];
+    $("#sortable-games tr").each(function() {
+        originalSequences.push($(this).data("sequence"));
+    });
+    
+    $("#sortable-games").sortable({
+        handle: ".game-handle",
+        axis: "y",
+        helper: function(e, ui) {
+            ui.children().each(function() {
+                $(this).width($(this).width());
+            });
+            return ui;
+        },
+        start: function(e, tr) {
+            tr.item.addClass("dragging");
+        },
+        stop: function(e, tr) {
+            tr.item.removeClass("dragging");
+        }
+    });
+    
+    $("#save-order").on("click", function() {
+        // Collect the new game order
+        var newOrder = [];
+        $("#sortable-games tr").each(function() {
+            newOrder.push($(this).data("game-id"));
+        });
+        
+        // Send the order to the server
+        $.ajax({
+            url: "/update_game_order",
+            type: "POST",
+            contentType: "application/json",
+            data: JSON.stringify({ games: newOrder }),
+            success: function(response) {
+                alert("Game order updated successfully!");
+                location.reload();
+            },
+            error: function(error) {
+                alert("Error updating game order: " + error.responseText);
+            }
+        });
+    });
+});
+</script>
 {% endblock %} 

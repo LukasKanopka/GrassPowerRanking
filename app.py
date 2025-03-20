@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, flash
+from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
 from models import db, Player, Game
 from datetime import datetime
 import math
@@ -13,7 +13,52 @@ db.init_app(app)
 @app.route('/')
 def index():
     players = Player.query.order_by(Player.elo.desc()).all()
-    return render_template('leaderboard.html', players=players)
+    
+    # Calculate wins, losses, and win percentage for each player
+    player_stats = {}
+    
+    # Get all games
+    games = Game.query.all()
+    
+    for player in players:
+        # Initialize stats
+        player_stats[player.id] = {'wins': 0, 'losses': 0, 'win_pct': 0}
+    
+    # Calculate wins and losses
+    for game in games:
+        team1_ids = [int(pid) for pid in game.team1_players.split(',')]
+        team2_ids = [int(pid) for pid in game.team2_players.split(',')]
+        
+        # Team 1 won
+        if game.winner == 1:
+            for player_id in team1_ids:
+                if player_id in player_stats:
+                    player_stats[player_id]['wins'] += 1
+            for player_id in team2_ids:
+                if player_id in player_stats:
+                    player_stats[player_id]['losses'] += 1
+        
+        # Team 2 won
+        elif game.winner == 2:
+            for player_id in team1_ids:
+                if player_id in player_stats:
+                    player_stats[player_id]['losses'] += 1
+            for player_id in team2_ids:
+                if player_id in player_stats:
+                    player_stats[player_id]['wins'] += 1
+    
+    # Calculate win percentages
+    for player_id, stats in player_stats.items():
+        total_games = stats['wins'] + stats['losses']
+        if total_games > 0:
+            stats['win_pct'] = (stats['wins'] / total_games) * 100
+        else:
+            stats['win_pct'] = 0
+        
+        # Format win percentage to 1 decimal place
+        stats['win_pct'] = round(stats['win_pct'], 1)
+    
+    return render_template('leaderboard.html', players=players, player_stats=player_stats)
 
 @app.route('/new_game', methods=['GET', 'POST'])
 def new_game():
@@ -47,7 +92,7 @@ def new_game():
 
 @app.route('/games')
 def games():
-    games_list = Game.query.order_by(Game.sequence).all()
+    games_list = Game.query.order_by(Game.sequence.desc()).all()
     players = Player.query.all()
     
     # Create a dict for quick lookup
@@ -115,6 +160,34 @@ def delete_game(game_id):
     flash('Game deleted successfully!')
     return redirect(url_for('games'))
 
+@app.route('/update_game_order', methods=['POST'])
+def update_game_order():
+    data = request.json
+    game_ids = data.get('games', [])
+    
+    if not game_ids:
+        return jsonify({'error': 'No game order provided'}), 400
+    
+    try:
+        # Update sequences based on the new order
+        for index, game_id in enumerate(game_ids):
+            # Sequence numbers start from 1
+            new_sequence = index + 1
+            game = Game.query.get(game_id)
+            if game:
+                game.sequence = new_sequence
+        
+        db.session.commit()
+        
+        # Recalculate ELOs based on the new game order
+        recalculate_all_elos()
+        
+        return jsonify({'message': 'Game order updated successfully'}), 200
+    
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
 def recalculate_all_elos():
     # Reset all player ELOs to starting values
     for player in Player.query.all():
@@ -145,12 +218,13 @@ def update_elos(team1_ids, team2_ids, winner):
     
     # Calculate ELO changes
     base_change = 50
+    exponent = 1.5
     if winner == 1:
-        ratio = team2_avg / team1_avg
+        ratio = (team2_avg / team1_avg)**exponent
         team1_change = base_change * ratio
         team2_change = -base_change * ratio
     else:
-        ratio = team1_avg / team2_avg
+        ratio = (team1_avg / team2_avg)**exponent
         team1_change = -base_change * ratio
         team2_change = base_change * ratio
     

@@ -12,7 +12,7 @@ def migrate_games():
             {
                 "teams": [
                     ["Lukas", "Alex", "Taylor"],  # Team 1
-                    ["Cade", "Marshall", "Arvin", "Jenessa", "Keagan"]  # Team 2
+                    ["Cade", "Marshall", "Arvin", "Jenessa"]  # Team 2
                 ],
                 "winner": 1,  # Team 1 won
                 "repeats": 3  # This game pattern repeats 3 times
@@ -20,7 +20,7 @@ def migrate_games():
             {
                 "teams": [
                     ["Lukas", "Marshall", "Taylor", "Jenessa"],  # Team 1
-                    ["Cade", "Alex", "Arvin", "Keagan"]  # Team 2
+                    ["Cade", "Alex", "Arvin"]  # Team 2
                 ],
                 "winners": [1, 2, 1, 2, 1]  # Alternating winners for 5 games
             },
@@ -29,7 +29,7 @@ def migrate_games():
                     ["Alex", "Marshall", "Taylor", "Arvin"],  # Team 1
                     ["Lukas", "Cade", "Jenessa", "Keagan"]  # Team 2
                 ],
-                "winners": [2, 1, 2]  # Pattern of winners for 3 games
+                "winners": [2, 2]  # Pattern of winners for 3 games
             },
             {
                 "teams": [
@@ -37,6 +37,13 @@ def migrate_games():
                     ["Cade", "Marshall", "Taylor", "Arvin"]  # Team 2
                 ],
                 "winners": [2, 1, 2]  # Pattern of winners for 3 games
+            },
+            {
+                "teams": [
+                    ["Alex", "Lukas"],  # Team 1
+                    ["Cade", "Marshall"]  # Team 2
+                ],
+                "winners": [1]  # Pattern of winners for 1 game
             }
         ]
         

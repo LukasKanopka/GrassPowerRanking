@@ -8,14 +8,30 @@
             <th>Rank</th>
             <th>Player</th>
             <th>ELO</th>
+            <th>Wins</th>
+            <th>Losses</th>
+            <th>Win %</th>
         </tr>
     </thead>
     <tbody>
         {% for player in players %}
-        <tr>
-            <td>{{ loop.index }}</td>
+        <tr class="{% if loop.index == 1 %}gold-rank{% elif loop.index == 2 %}silver-rank{% elif loop.index == 3 %}bronze-rank{% endif %}">
+            <td>
+                {% if loop.index == 1 %}
+                    🥇 1
+                {% elif loop.index == 2 %}
+                    🥈 2
+                {% elif loop.index == 3 %}
+                    🥉 3
+                {% else %}
+                    {{ loop.index }}
+                {% endif %}
+            </td>
             <td>{{ player.name }}</td>
             <td>{{ "%.2f"|format(player.elo) }}</td>
+            <td>{{ player_stats[player.id]['wins'] }}</td>
+            <td>{{ player_stats[player.id]['losses'] }}</td>
+            <td>{{ player_stats[player.id]['win_pct'] }}%</td>
         </tr>
         {% endfor %}
     </tbody>
