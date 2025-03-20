@@ -35,9 +35,132 @@
             margin-right: 5px;
             color: #6c757d;
         }
+        :root {
+            --light-bg-color: #f8f9fa;
+            --light-text-color: #212529;
+            --light-card-bg: #ffffff;
+            --light-border-color: #dee2e6;
+            --light-table-hover: rgba(0, 0, 0, 0.075);
+            
+            --dark-bg-color: #222;
+            --dark-text-color: #f8f9fa;
+            --dark-card-bg: #333;
+            --dark-border-color: #444;
+            --dark-table-hover: rgba(255, 255, 255, 0.075);
+        }
+        
+        /* Light mode (default) */
+        body.light-mode {
+            background-color: var(--light-bg-color);
+            color: var(--light-text-color);
+        }
+        
+        body.light-mode .card {
+            background-color: var(--light-card-bg);
+            border-color: var(--light-border-color);
+        }
+        
+        body.light-mode .table {
+            color: var(--light-text-color);
+        }
+        
+        body.light-mode .table-striped tbody tr:nth-of-type(odd) {
+            background-color: rgba(0, 0, 0, 0.05);
+        }
+        
+        body.light-mode .table-hover tbody tr:hover {
+            background-color: var(--light-table-hover);
+        }
+        
+        /* Dark mode */
+        body.dark-mode {
+            background-color: var(--dark-bg-color);
+            color: var(--dark-text-color);
+        }
+        
+        body.dark-mode .card {
+            background-color: var(--dark-card-bg);
+            border-color: var(--dark-border-color);
+        }
+        
+        body.dark-mode .card-header {
+            background-color: rgba(0, 0, 0, 0.2);
+            border-color: var(--dark-border-color);
+        }
+        
+        body.dark-mode .table {
+            color: var(--dark-text-color);
+        }
+        
+        body.dark-mode .table-striped tbody tr:nth-of-type(odd) {
+            background-color: rgba(255, 255, 255, 0.05);
+        }
+        
+        body.dark-mode .table-hover tbody tr:hover {
+            background-color: var(--dark-table-hover);
+        }
+        
+        body.dark-mode .form-control,
+        body.dark-mode .form-select {
+            background-color: var(--dark-bg-color);
+            border-color: var(--dark-border-color);
+            color: var(--dark-text-color);
+        }
+        
+        body.dark-mode .modal-content {
+            background-color: var(--dark-card-bg);
+            color: var(--dark-text-color);
+        }
+        
+        body.dark-mode .alert-info {
+            background-color: #2a4865;
+            color: #cce5ff;
+            border-color: #2a4865;
+        }
+        
+        /* Icons visibility based on theme */
+        body.light-mode .dark-icon {
+            display: inline-block;
+        }
+        
+        body.light-mode .light-icon {
+            display: none;
+        }
+        
+        body.dark-mode .dark-icon {
+            display: none;
+        }
+        
+        body.dark-mode .light-icon {
+            display: inline-block;
+        }
+        
+        /* Button style adjustments for dark mode */
+        body.dark-mode #theme-toggle {
+            background-color: #454545;
+            border-color: #666;
+            color: #fff;
+        }
+        
+        /* Dark mode-specific medal colors */
+        body.dark-mode .gold-rank {
+            background-color: #B8860B !important; /* Darker gold for dark mode */
+            color: #FFF !important;
+            font-weight: bold;
+        }
+        body.dark-mode .silver-rank {
+            background-color: #707070 !important; /* Darker silver for dark mode */
+            color: #FFF !important;
+            font-weight: bold;
+        }
+        body.dark-mode .bronze-rank {
+            background-color: #8B4513 !important; /* Darker bronze for dark mode */
+            color: #FFF !important;
+            font-weight: bold;
+        }
     </style>
 </head>
-<body>
+<body class="light-mode">
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
         <div class="container-fluid">
             <a class="navbar-brand" href="{{ url_for('index') }}">ELO Tracker</a>
@@ -87,12 +210,63 @@
                         <a class="nav-link" href="{{ url_for('manage_players') }}">Manage Players</a>
                     </li>
                 </ul>
+                
+                <!-- Add theme toggle button to the right side -->
+                <div class="d-flex">
+                    <button id="theme-toggle" class="btn btn-outline-light me-2">
+                        <i class="bi bi-moon-fill dark-icon"></i>
+                        <i class="bi bi-sun-fill light-icon d-none"></i>
+                        <span class="ms-1 d-none d-sm-inline">Dark Mode</span>
+                    </button>
+                </div>
             </div>
         </div>
     </nav>
     <div class="container mt-4">
         {% block content %}{% endblock %}
     </div>
+
+    <!-- Add Bootstrap Icons if not already included -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.0/font/bootstrap-icons.css">
+    
+    <!-- JavaScript for theme switching -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Get theme toggle button
+            const themeToggle = document.getElementById('theme-toggle');
+            const themeText = themeToggle.querySelector('span');
+            
+            // Check for saved theme preference
+            const savedTheme = localStorage.getItem('theme') || 'light-mode';
+            document.body.className = savedTheme;
+            
+            // Update button text based on current theme
+            updateButtonText();
+            
+            // Add click event to toggle theme
+            themeToggle.addEventListener('click', function() {
+                if (document.body.classList.contains('light-mode')) {
+                    document.body.classList.replace('light-mode', 'dark-mode');
+                    localStorage.setItem('theme', 'dark-mode');
+                } else {
+                    document.body.classList.replace('dark-mode', 'light-mode');
+                    localStorage.setItem('theme', 'light-mode');
+                }
+                updateButtonText();
+            });
+            
+            // Function to update button text
+            function updateButtonText() {
+                if (document.body.classList.contains('dark-mode')) {
+                    themeText.textContent = 'Light Mode';
+                } else {
+                    themeText.textContent = 'Dark Mode';
+                }
+            }
+        });
+    </script>
+    
+    <!-- Bootstrap bundle with Popper -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js" 
             integrity="sha384-ka7Sk0Gln4gmtz2MlQnikT1wXgYsOg+OMhuP+IlRH9sENBO0LRn5q+8nbTov4+1p" 
             crossorigin="anonymous"></script>

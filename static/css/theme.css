@@ -1,0 +1,85 @@
+/* Add this file to your static folder if you want to separate the CSS */
+/* You can also just include this in the style block in base.html if you prefer */
+
+/* Custom styles for form elements in dark mode */
+body.dark-mode .form-check-input {
+    background-color: #333;
+    border-color: #666;
+}
+
+body.dark-mode .form-check-input:checked {
+    background-color: #0d6efd;
+    border-color: #0d6efd;
+}
+
+/* Alert colors for dark mode */
+body.dark-mode .alert-success {
+    background-color: #1e4620;
+    color: #d4edda;
+    border-color: #2a623d;
+}
+
+body.dark-mode .alert-danger {
+    background-color: #5c1c24;
+    color: #f8d7da;
+    border-color: #842029;
+}
+
+/* Card and table adjustments */
+body.dark-mode .card-body,
+body.dark-mode .table {
+    background-color: #333;
+}
+
+body.dark-mode .table-striped > tbody > tr:nth-of-type(odd) > * {
+    color: #f8f9fa;
+    background-color: #3a3a3a;
+}
+
+/* Button styles */
+body.dark-mode .btn-primary {
+    background-color: #0d6efd;
+    border-color: #0a58ca;
+}
+
+body.dark-mode .btn-secondary {
+    background-color: #6c757d;
+    border-color: #5c636a;
+}
+
+body.dark-mode .btn-danger {
+    background-color: #dc3545;
+    border-color: #b02a37;
+}
+
+body.dark-mode .btn-success {
+    background-color: #198754;
+    border-color: #146c43;
+}
+
+/* Navbar adjustments for dark mode - make it even darker than the body */
+body.dark-mode .navbar-dark {
+    background-color: #111 !important;
+}
+
+body.dark-mode .dropdown-menu {
+    background-color: #333;
+    border-color: #444;
+}
+
+body.dark-mode .dropdown-item {
+    color: #f8f9fa;
+}
+
+body.dark-mode .dropdown-item:hover {
+    background-color: #444;
+    color: #fff;
+}
+
+body.dark-mode .dropdown-item.active {
+    background-color: #0d6efd;
+}
+
+body.dark-mode .dropdown-divider {
+    border-color: #444;
+} 
