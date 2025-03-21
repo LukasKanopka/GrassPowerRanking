@@ -28,6 +28,7 @@ body.dark-mode .alert-danger {
 /* Card and table adjustments */
 body.dark-mode .card-body,
 body.dark-mode .table {
+    color: #f8f9fa;
     background-color: #333;
 }
 

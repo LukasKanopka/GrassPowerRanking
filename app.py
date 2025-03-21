@@ -13,38 +13,19 @@ db.init_app(app)
 # Add this before_request handler to ensure a series is selected
 @app.before_request
 def ensure_series_selected():
-    """Make sure a series is selected before handling requests"""
-    # Skip for static files and some specific routes
-    if request.endpoint in ['static', 'select_series'] or request.path.startswith('/static/'):
+    if request.endpoint in ['static']:
         return
-        
-    # Create default series if none exist
+    
+    # Create default series if none exists
     if Series.query.count() == 0:
         default_series = Series(name="Default Series", description="Initial ranking series")
         db.session.add(default_series)
         db.session.commit()
-        print(f"Created default series with ID: {default_series.id}")
-        
+    
     # Set current series in session if not already set
     if 'current_series_id' not in session:
         default_series = Series.query.first()
-        if default_series:
-            session['current_series_id'] = default_series.id
-            print(f"Set current series to: {default_series.name} (ID: {default_series.id})")
-
-# Add this just after creating the app but before any routes
-@app.context_processor
-def inject_series_data():
-    """Make series data available to all templates"""
-    all_series = Series.query.all()
-    current_series_id = session.get('current_series_id')
-    current_series = Series.query.get(current_series_id) if current_series_id else None
-    
-    return {
-        'all_series': all_series,
-        'current_series': current_series,
-        'current_series_id': current_series_id
-    }
+        session['current_series_id'] = default_series.id
 
 # Series management routes
 @app.route('/manage_series')
@@ -54,11 +35,10 @@ def manage_series():
 
 @app.route('/series/select/<int:series_id>')
 def select_series(series_id):
-    """Switch to a different series"""
     series = Series.query.get_or_404(series_id)
     session['current_series_id'] = series_id
     flash(f'Switched to "{series.name}" series', 'success')
-    return redirect(request.referrer or url_for('index'))
+    return redirect(url_for('index'))
 
 @app.route('/series/create', methods=['GET', 'POST'])
 def create_series():
@@ -247,7 +227,6 @@ def games():
     players_dict = {str(p.id): p.name for p in players}
     
     formatted_games = []
-    
     for game in games_list:
         team1_names = [players_dict.get(pid, "Unknown") for pid in game.team1_players.split(',')]
         team2_names = [players_dict.get(pid, "Unknown") for pid in game.team2_players.split(',')]
