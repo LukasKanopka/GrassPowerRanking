@@ -5,9 +5,18 @@ import math
 import os
 
 app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///elo.db'
+
+# Configure SQLite with persistence (for Render)
+if 'RENDER' in os.environ:
+    # Use persistent volume on Render
+    sqlite_path = os.path.join(os.environ.get('RENDER_MOUNT_PATH', ''), 'elo.db')
+    app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{sqlite_path}'
+else:
+    # Local development path
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///elo.db'
+
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.secret_key = 'your_secret_key'  # Needed for flash messages
+app.secret_key = os.environ.get('SECRET_KEY', 'your_secret_key')
 
 db.init_app(app)
 
@@ -501,8 +510,8 @@ def manage_players():
                           all_series=all_series)
 
 if __name__ == '__main__':
-    # For local development
-    app.run(debug=True)
+    port = int(os.environ.get('PORT', 5000))
+    app.run(host='0.0.0.0', port=port, debug=False)
 else:
     # For production
     # This allows gunicorn to run the app properly
