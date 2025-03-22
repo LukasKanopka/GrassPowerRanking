@@ -230,6 +230,19 @@
                 
                 <!-- Add theme toggle button to the right side -->
                 <div class="d-flex">
+                    {% if session.authenticated %}
+                    <a href="{{ url_for('logout') }}" class="btn btn-outline-light me-2">
+                        <i class="bi bi-box-arrow-right"></i>
+                        <span class="ms-1 d-none d-sm-inline">Logout</span>
+                    </a>
+                    {% else %}
+                    <a href="{{ url_for('login') }}" class="btn btn-outline-light me-2">
+                        <i class="bi bi-box-arrow-in-right"></i>
+                        <span class="ms-1 d-none d-sm-inline">Login</span>
+                    </a>
+                    {% endif %}
+                    
+                    <!-- Theme toggle button -->
                     <button id="theme-toggle" class="btn btn-outline-light">
                         <span>Dark Mode</span>
                     </button>
