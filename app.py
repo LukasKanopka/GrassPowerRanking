@@ -2,11 +2,22 @@ from flask import Flask, render_template, request, redirect, url_for, flash, jso
 from models import db, Player, Game, Series
 from datetime import datetime
 import math
+import os
+from functools import wraps
 
 app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///elo.db'
+
+# Configure SQLite with persistence (for Render)
+if 'RENDER' in os.environ:
+    # Use persistent volume on Render
+    sqlite_path = os.path.join(os.environ.get('RENDER_MOUNT_PATH', ''), 'elo.db')
+    app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{sqlite_path}'
+else:
+    # Local development path
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///elo.db'
+
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.secret_key = 'your_secret_key'  # Needed for flash messages
+app.secret_key = os.environ.get('SECRET_KEY', 'your_secret_key')
 
 db.init_app(app)
 
@@ -27,8 +38,45 @@ def ensure_series_selected():
         default_series = Series.query.first()
         session['current_series_id'] = default_series.id
 
+# Add authentication decorator
+def login_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'authenticated' not in session or not session['authenticated']:
+            # Store the original destination
+            session['next_url'] = request.url
+            flash('Please enter the password to continue', 'warning')
+            return redirect(url_for('login'))
+        return f(*args, **kwargs)
+    return decorated_function
+
+# Add login route
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    error = None
+    if request.method == 'POST':
+        password = request.form.get('password')
+        if password == 'GrassPassword':
+            session['authenticated'] = True
+            next_url = session.get('next_url')
+            if next_url:
+                session.pop('next_url', None)
+                return redirect(next_url)
+            return redirect(url_for('index'))
+        else:
+            error = 'Invalid password'
+    return render_template('login.html', error=error)
+
+# Add logout route
+@app.route('/logout')
+def logout():
+    session.pop('authenticated', None)
+    flash('You have been logged out', 'success')
+    return redirect(url_for('index'))
+
 # Series management routes
 @app.route('/manage_series')
+@login_required
 def manage_series():
     series_list = Series.query.order_by(Series.name).all()
     return render_template('manage_series.html', series_list=series_list)
@@ -41,6 +89,7 @@ def select_series(series_id):
     return redirect(url_for('index'))
 
 @app.route('/series/create', methods=['GET', 'POST'])
+@login_required
 def create_series():
     if request.method == 'POST':
         name = request.form.get('name')
@@ -66,6 +115,7 @@ def create_series():
     return render_template('create_series.html')
 
 @app.route('/series/edit/<int:series_id>', methods=['GET', 'POST'])
+@login_required
 def edit_series(series_id):
     series = Series.query.get_or_404(series_id)
     
@@ -94,6 +144,7 @@ def edit_series(series_id):
     return render_template('edit_series.html', series=series)
 
 @app.route('/series/delete/<int:series_id>', methods=['POST'])
+@login_required
 def delete_series(series_id):
     if Series.query.count() <= 1:
         flash('Cannot delete the only series. Create another series first.', 'danger')
@@ -166,6 +217,7 @@ def index():
                            all_series=all_series)
 
 @app.route('/new_game', methods=['GET', 'POST'])
+@login_required
 def new_game():
     series_id = session.get('current_series_id')
     current_series = Series.query.get(series_id)
@@ -248,6 +300,7 @@ def games():
                           all_series=all_series)
 
 @app.route('/edit_game/<int:game_id>', methods=['GET', 'POST'])
+@login_required
 def edit_game(game_id):
     series_id = session.get('current_series_id')
     
@@ -285,6 +338,7 @@ def edit_game(game_id):
                           team2_ids=team2_ids)
 
 @app.route('/delete_game/<int:game_id>', methods=['POST'])
+@login_required
 def delete_game(game_id):
     series_id = session.get('current_series_id')
     
@@ -378,6 +432,7 @@ def update_elos(team1_ids, team2_ids, winner, series_id):
         player.elo += team2_change
 
 @app.route('/manage_players', methods=['GET', 'POST'])
+@login_required
 def manage_players():
     series_id = session.get('current_series_id')
     current_series = Series.query.get(series_id)
@@ -500,6 +555,10 @@ def manage_players():
                           all_series=all_series)
 
 if __name__ == '__main__':
-    with app.app_context():
-        db.create_all()
-    app.run(debug=True) 
+    port = int(os.environ.get('PORT', 4999))
+    app.run(host='0.0.0.0', port=port, debug=False)
+else:
+    # For production
+    # This allows gunicorn to run the app properly
+    # No code needed here, just the app variable
+    pass 

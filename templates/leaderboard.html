@@ -2,6 +2,15 @@
 
 {% block content %}
 <h2>Leaderboard</h2>
+
+{% if not session.authenticated %}
+<div class="alert alert-info">
+    <i class="bi bi-info-circle"></i> 
+    Login required to add or edit games and players. 
+    <a href="{{ url_for('login') }}" class="alert-link">Login here</a>
+</div>
+{% endif %}
+
 <table class="table">
     <thead>
         <tr>
