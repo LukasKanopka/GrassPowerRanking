@@ -2,6 +2,7 @@ from flask import Flask, render_template, request, redirect, url_for, flash, jso
 from models import db, Player, Game, Series
 from datetime import datetime
 import math
+import os
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///elo.db'
@@ -500,6 +501,10 @@ def manage_players():
                           all_series=all_series)
 
 if __name__ == '__main__':
-    with app.app_context():
-        db.create_all()
-    app.run(debug=True) 
+    # For local development
+    app.run(debug=True)
+else:
+    # For production
+    # This allows gunicorn to run the app properly
+    # No code needed here, just the app variable
+    pass 
